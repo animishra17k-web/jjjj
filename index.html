@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<meta name="description" content="Adaptive SSC CGL study system">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/static/icons/icon-192.png" sizes="192x192">
+<title>SSC CGL AI OS</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#172033;background:#f3f5f8}
+*{box-sizing:border-box}
+body{margin:0}
+.wrap{max-width:1180px;margin:auto;padding:18px}
+.top{display:flex;justify-content:space-between;gap:12px;align-items:center}
+h1,h2,h3{margin-top:0}
+.muted{color:#667085}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.card{background:#fff;border:1px solid #e1e5ea;border-radius:16px;padding:16px;margin:14px 0;box-shadow:0 2px 10px #00000008}
+input,textarea,select,button{font:inherit;padding:11px;border-radius:10px;border:1px solid #ccd2da;margin:4px 0}
+input,textarea,select{width:100%;background:white}
+textarea{min-height:120px;resize:vertical}
+button{cursor:pointer;background:#111827;color:white;border:0;padding:11px 15px}
+button.secondary{background:#e9edf2;color:#172033}
+button.ghost{background:white;color:#172033;border:1px solid #ccd2da}
+button:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row>*{flex:1;min-width:110px}
+.stat{font-size:28px;font-weight:700}
+.small{font-size:13px}
+.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef1f5;margin:2px}
+.topic{padding:10px;border-top:1px solid #eee}
+.topic:first-child{border-top:0}
+.topic b{display:block}
+.bar{height:8px;background:#e7eaf0;border-radius:9px;overflow:hidden;margin-top:7px}
+.bar i{display:block;height:100%;background:#111827}
+.danger{font-weight:650}
+#toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#111827;color:white;padding:10px 14px;border-radius:12px;display:none;z-index:50;max-width:92vw}
+#testPanel{min-height:120px}
+.question{border:1px solid #e1e5ea;border-radius:14px;padding:15px;margin:12px 0;background:#fafbfc}
+.option{display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid #e1e5ea;border-radius:10px;background:white;margin:7px 0}
+.option input{width:auto;margin-top:5px}
+.result-ok{border-left:5px solid #248a4d;padding-left:10px}
+.result-bad{border-left:5px solid #b42318;padding-left:10px}
+pre{white-space:pre-wrap;word-break:break-word;background:#f7f8fa;border-radius:10px;padding:10px;min-height:40px}
+@media(max-width:760px){
+  .grid,.grid3{grid-template-columns:1fr}
+  .top{align-items:flex-start;flex-direction:column}
+  .wrap{padding:12px}
+  .row>*{min-width:100%}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>SSC CGL AI OS</h1>
+      <div class="muted">Source → knowledge → questions → test → error analysis → revision</div>
+    </div>
+    <button class="secondary" onclick="install()">Install on tablet</button>
+  </div>
+
+  <div class="grid3">
+    <section class="card"><div class="muted">Questions</div><div class="stat" id="qtotal">0</div></section>
+    <section class="card"><div class="muted">Flashcards</div><div class="stat" id="ftotal">0</div></section>
+    <section class="card"><div class="muted">Tests completed</div><div class="stat" id="ttotal">0</div></section>
+  </div>
+
+  <section class="card">
+    <h2>1. Add study material</h2>
+    <div class="grid">
+      <form id="s">
+        <input name="name" placeholder="Subject e.g. English" required>
+        <button>Add subject</button>
+      </form>
+      <form id="t">
+        <select name="subject_id" id="ss"></select>
+        <input name="name" placeholder="Topic e.g. Subject-Verb Agreement" required>
+        <button>Add topic</button>
+      </form>
+    </div>
+    <form id="src">
+      <select name="topic_id" id="tt"></select>
+      <input name="title" placeholder="Source title (optional)">
+      <textarea name="content" placeholder="Paste source text, or upload a PDF/DOCX/TXT below"></textarea>
+      <input type="file" name="file" accept=".pdf,.docx,.txt">
+      <button>Add source</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>2. Build the AI study pack</h2>
+    <div class="row">
+      <select id="bt"></select>
+      <input id="n" type="number" min="10" max="100" value="40">
+      <button onclick="build()">Build pack</button>
+      <button class="ghost" onclick="downloadPack('pdf')">Export PDF</button>
+      <button class="ghost" onclick="downloadPack('anki')">Export Anki CSV</button>
+    </div>
+    <p class="muted small">Runs extraction → teaching notes → flashcards → questions → validation. The selected topic needs at least one source.</p>
+    <pre id="out"></pre>
+  </section>
+
+  <section class="card">
+    <h2>3. Take an SSC-style test</h2>
+    <div class="row">
+      <select id="testTopic"></select>
+      <input id="testCount" type="number" min="5" max="50" value="10" aria-label="Number of questions">
+      <button onclick="startTest()">Start test</button>
+    </div>
+    <div id="testPanel"><p class="muted">Choose a topic with generated questions and start a test.</p></div>
+  </section>
+
+  <section class="card">
+    <h2>4. Today's adaptive queue</h2>
+    <div id="topics"></div>
+    <div class="row">
+      <button class="secondary" onclick="loadDashboard()">Refresh</button>
+      <button onclick="loadReview()">Start flashcard review</button>
+    </div>
+    <div id="review"></div>
+  </section>
+
+  <section class="card">
+    <h2>5. Weaknesses detected</h2>
+    <div id="weak"></div>
+  </section>
+</div>
+
+<div id="toast"></div>
+<script>
+let deferredPrompt=null;
+let testState=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e});
+
+function $(id){return document.getElementById(id)}
+function esc(x){return String(x??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+function toast(x){$('toast').textContent=x;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',2800)}
+async function api(url,opt={}){let r=await fetch(url,opt);let j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||j.detail||'Request failed');return j}
+
+async function install(){
+  if(deferredPrompt){await deferredPrompt.prompt();deferredPrompt=null;return}
+  alert('On Android Chrome: open browser menu → Add to Home screen / Install app.');
+}
+
+async function load(){
+  try{
+    const [subs,tops]=await Promise.all([api('/api/subjects'),api('/api/topics')]);
+    $('ss').innerHTML=subs.length?subs.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join(''):'<option value="">Add a subject first</option>';
+    const opts=tops.map(x=>`<option value="${x.id}">${esc(x.subject)} — ${esc(x.name)}</option>`).join('');
+    $('tt').innerHTML=opts||'<option value="">Add a topic first</option>';
+    $('bt').innerHTML=opts||'<option value="">Add a topic first</option>';
+    $('testTopic').innerHTML=opts||'<option value="">Add a topic first</option>';
+    await loadDashboard();
+  }catch(e){$('out').textContent=e.message}
+}
+
+$('s').onsubmit=async e=>{e.preventDefault();try{await api('/api/subjects',{method:'POST',body:new FormData(e.target)});e.target.reset();await load();toast('Subject added')}catch(x){toast(x.message)}};
+$('t').onsubmit=async e=>{e.preventDefault();try{await api('/api/topics',{method:'POST',body:new FormData(e.target)});e.target.reset();await load();toast('Topic added')}catch(x){toast(x.message)}};
+$('src').onsubmit=async e=>{e.preventDefault();$('out').textContent='Uploading source...';try{let j=await api('/api/sources',{method:'POST',body:new FormData(e.target)});$('out').textContent=JSON.stringify(j,null,2);e.target.reset();toast('Source saved')}catch(x){$('out').textContent=x.message}};
+
+async function build(){
+  if(!$('bt').value){toast('Add a topic first');return}
+  $('out').textContent='Running AI layers. Keep this tab open...';
+  try{let j=await api(`/api/topics/${$('bt').value}/build?question_count=${$('n').value}`,{method:'POST'});$('out').textContent=JSON.stringify(j,null,2);await load();toast('Study pack built')}
+  catch(x){$('out').textContent=x.message}
+}
+async function downloadPack(kind){
+  if(!$('bt').value){toast('Select a topic first');return}
+  window.location.href=`/api/topics/${$('bt').value}/export/${kind}`;
+}
+
+async function loadDashboard(){
+  try{
+    let d=await api('/api/dashboard');
+    $('qtotal').textContent=d.totals.questions;
+    $('ftotal').textContent=d.totals.flashcards;
+    $('ttotal').textContent=d.totals.tests_completed;
+    $('topics').innerHTML=d.topics.length?d.topics.map(t=>`<div class="topic"><b>${esc(t.subject)} — ${esc(t.name)}</b><span class="pill">mastery ${Math.round(t.mastery||0)}%</span><span class="pill">priority ${Math.round(t.revision_priority||0)}</span><div class="bar"><i style="width:${Math.min(100,Math.max(0,t.mastery||0))}%"></i></div></div>`).join(''):'<p class="muted">No topics yet.</p>';
+    $('weak').innerHTML=d.weaknesses.length?d.weaknesses.map(w=>`<div class="topic"><b class="danger">${esc(w.topic)}: ${esc(w.label)}</b><span class="muted"> severity ${esc(w.severity)} · ${esc(w.occurrences)} occurrence(s)</span></div>`).join(''):'<p class="muted">No weaknesses recorded yet. Take a test after building questions.</p>';
+  }catch(x){$('out').textContent=x.message}
+}
+
+async function startTest(){
+  const topic=$('testTopic').value;
+  if(!topic){toast('Select a topic first');return}
+  $('testPanel').innerHTML='<p class="muted">Loading questions...</p>';
+  try{
+    const count=Math.min(50,Math.max(5,Number($('testCount').value)||10));
+    const qs=await api(`/api/topics/${topic}/questions?limit=${count}`);
+    if(!qs.length){$('testPanel').innerHTML='<p class="muted">No generated questions for this topic. Build a study pack first.</p>';return}
+    const test=await api('/api/tests',{method:'POST',body:new URLSearchParams({title:`SSC CGL Practice · ${new Date().toLocaleString()}`,topic_id:topic,question_ids:qs.map(q=>q.id).join(',')})});
+    testState={id:test.test_id,topic,questions:qs,index:0,answers:{},submitted:false,result:null};
+    renderTest();
+  }catch(e){$('testPanel').innerHTML=`<p class="danger">${esc(e.message)}</p>`}
+}
+
+function renderTest(){
+  const s=testState;if(!s)return;
+  if(s.submitted){renderResults();return}
+  const q=s.questions[s.index];
+  const options=Array.isArray(q.options)?q.options:[];
+  let optionsHtml=options.length?options.map((opt,i)=>{
+    const text=typeof opt==='object'?(opt.text??opt.label??JSON.stringify(opt)):opt;
+    const value=String(text);
+    const checked=s.answers[q.id]===value?'checked':'';
+    return `<label class="option"><input type="radio" name="answer" value="${esc(value)}" ${checked} onchange="setAnswer(this.value)"><span>${esc(String.fromCharCode(65+i))}. ${esc(value)}</span></label>`
+  }).join(''):`<textarea id="freeAnswer" placeholder="Type your answer">${esc(s.answers[q.id]||'')}</textarea>`;
+  $('testPanel').innerHTML=`
+    <div class="row"><div><b>Question ${s.index+1} of ${s.questions.length}</b><div class="muted small">${esc(q.difficulty)} · ${esc(q.qtype)}</div></div><div class="muted small">Answered ${Object.keys(s.answers).length}/${s.questions.length}</div></div>
+    <div class="question"><h3>${esc(q.prompt)}</h3>${optionsHtml}</div>
+    <div class="row">
+      <button class="secondary" onclick="prevQuestion()" ${s.index===0?'disabled':''}>Previous</button>
+      ${s.index<s.questions.length-1?'<button onclick="nextQuestion()">Next</button>':'<button onclick="submitTest()">Submit test</button>'}
+    </div>`;
+}
+function setAnswer(value){if(testState){testState.answers[testState.questions[testState.index].id]=value}}
+function nextQuestion(){syncAnswer();if(testState.index<testState.questions.length-1){testState.index++;renderTest()}}
+function prevQuestion(){syncAnswer();if(testState.index>0){testState.index--;renderTest()}}
+function syncAnswer(){
+  if(!testState)return;
+  const q=testState.questions[testState.index];
+  const checked=document.querySelector('input[name="answer"]:checked');
+  if(checked)testState.answers[q.id]=checked.value;
+  const free=$('freeAnswer');
+  if(free)testState.answers[q.id]=free.value;
+}
+async function submitTest(){
+  syncAnswer();
+  if(!testState)return;
+  const answered=Object.keys(testState.answers).length;
+  if(answered<testState.questions.length && !confirm(`You answered ${answered}/${testState.questions.length}. Submit anyway?`))return;
+  $('testPanel').innerHTML='<p class="muted">Submitting and analyzing mistakes...</p>';
+  try{
+    testState.result=await api(`/api/tests/${testState.id}/submit`,{method:'POST',body:new URLSearchParams({answers_json:JSON.stringify(testState.answers)})});
+    testState.submitted=true;
+    renderTest();
+    await loadDashboard();
+  }catch(e){$('testPanel').innerHTML=`<p class="danger">${esc(e.message)}</p>`}
+}
+function renderResults(){
+  const s=testState,r=s.result||{};
+  const byId={};s.questions.forEach(q=>byId[q.id]=q);
+  const items=(r.items||[]).map((it,i)=>{const q=byId[it.question_id]||{};const ans=s.answers[it.question_id]||'(not answered)';return `<div class="topic ${it.correct?'result-ok':'result-bad'}"><b>Q${i+1}. ${it.correct?'Correct':'Incorrect'}</b><div>${esc(q.prompt||'')}</div><div class="small muted">Your answer: ${esc(ans)}</div>${it.correct?'':`<div class="small"><b>Error:</b> ${esc(it.error_type||'other')} — ${esc(it.error_detail||'Review the relevant concept.')}</div>${it.repair_skill?`<div class="small"><b>Repair:</b> ${esc(it.repair_skill)}</div>`:''}`}</div>`}).join('');
+  const actions=(r.repair_actions||[]).map(a=>`<li>${esc(a.action)} <span class="muted">(${esc(a.priority)})</span></li>`).join('');
+  $('testPanel').innerHTML=`<div class="card"><h3>Result: ${esc(r.score)} / ${esc(r.total)} (${esc(r.percentage)}%)</h3><div class="muted">Score is calculated deterministically from the stored question answer. AI is used to analyze the error pattern.</div></div><h3>Question review</h3>${items||'<p class="muted">No item-level results.</p>'}<h3>Repair actions</h3>${actions?`<ul>${actions}</ul>`:'<p class="muted">No AI repair actions returned.</p>'}<button onclick="resetTest()" class="secondary">Take another test</button>`;
+}
+function resetTest(){testState=null;$('testPanel').innerHTML='<p class="muted">Choose a topic and start another test.</p>'}
+
+async function loadReview(){
+  try{
+    let rows=await api('/api/review/queue?limit=10');
+    if(!rows.length){$('review').innerHTML='<p class="muted">Review queue is empty.</p>';return}
+    let i=0;
+    function show(){let x=rows[i];$('review').innerHTML=`<div class="card"><div class="muted">${i+1}/${rows.length} · ${esc(x.topic)}</div><h3>${esc(x.front)}</h3><details><summary>Show answer</summary><p>${esc(x.back)}</p></details><div class="row"><button onclick="rate('again')">Again</button><button onclick="rate('hard')">Hard</button><button onclick="rate('good')">Good</button><button onclick="rate('easy')">Easy</button></div></div>`}
+    window.rate=async r=>{await api('/api/review/'+rows[i].id,{method:'POST',body:new URLSearchParams({rating:r})});i++;if(i>=rows.length){$('review').innerHTML='<p>Review session complete.</p>'}else show()};
+    show();
+  }catch(e){$('review').innerHTML=`<p class="danger">${esc(e.message)}</p>`}
+}
+
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+load();
+</script>
+</body>
+</html>
